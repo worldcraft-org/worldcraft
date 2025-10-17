@@ -1,6 +1,6 @@
 # NeRF to Voxel Grid Converter
 
-Week 1 prototype for converting NeRF scene representations into dense semantic voxel grids for Minecraft export.
+Converts NeRF scene representations into dense semantic voxel grids for Minecraft export. Supports multiple NeRF dataset formats including synthetic, LLFF, real_360, and Replica datasets.
 
 ## Installation
 
@@ -8,6 +8,9 @@ Week 1 prototype for converting NeRF scene representations into dense semantic v
 - Python 3.8+
 - NumPy
 - Matplotlib
+- PyTorch (optional, for advanced NeRF models)
+- PIL/Pillow (optional, for image loading)
+- OpenCV (optional, for enhanced visualizations)
 
 ### Setup
 ```bash
@@ -23,15 +26,25 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Basic Usage (with default parameters)
+### Basic Usage (with dummy NeRF)
 ```bash
-python nerf_to_voxel.py
+python nerf_to_voxel.py --use_dummy
 ```
 
-This will create outputs in `outputs/scene_001/` with default settings:
-- Voxel size: 0.15m
-- Bounding box: [-10, 10] x [-10, 10] x [0, 20] meters
-- Uses dummy NeRF data for testing
+### Real NeRF Dataset Usage
+```bash
+# For synthetic NeRF datasets
+python nerf_to_voxel.py --dataset_type synthetic --scene lego --archive_dir /path/to/datasets
+
+# For LLFF datasets
+python nerf_to_voxel.py --dataset_type llff --scene fern --archive_dir /path/to/datasets
+
+# For Replica datasets
+python nerf_to_voxel.py --dataset_type replica --scene apartment_0 --replica_dir ./Replica-Dataset
+
+# Direct dataset path
+python nerf_to_voxel.py --dataset /path/to/specific/dataset/folder
+```
 
 ### Custom Parameters
 ```bash
@@ -45,6 +58,14 @@ python nerf_to_voxel.py \
 - `--voxel_size`: Size of each voxel in meters (default: 0.15)
 - `--bbox`: Bounding box as 6 floats: xmin xmax ymin ymax zmin zmax (default: -10 10 -10 10 0 20)
 - `--out`: Output directory path (default: outputs/scene_001)
+- `--dataset`: Direct path to NeRF dataset directory
+- `--dataset_type`: Type of dataset (synthetic, llff, real_360, replica)
+- `--scene`: Scene name within the dataset type
+- `--use_dummy`: Use dummy NeRF model instead of real dataset
+- `--density_threshold`: Density threshold for occupancy determination (default: 0.5)
+- `--batch_size`: Batch size for processing to avoid OOM (default: 10000)
+- `--archive_dir`: Directory containing NeRF datasets (default: ./archive)
+- `--replica_dir`: Directory containing Replica datasets (default: ./Replica-Dataset)
 
 ## Output Format
 
@@ -109,20 +130,30 @@ Current label set (placeholder for testing):
 
 This will be updated when real Semantic-NeRF data is available.
 
-## Current Limitations (Week 1 Prototype)
+## Supported Dataset Types
 
-1. **Dummy NeRF**: Uses synthetic test data instead of real NeRF model
-2. **No Chunking**: Processes entire grid in memory (works for small scenes <100x100x100 voxels)
-3. **Simple Semantics**: 3 placeholder classes only
-4. **Fixed Threshold**: Occupancy threshold hardcoded to 0.5
+1. **Synthetic NeRF**: Standard synthetic datasets with `transforms_train.json`
+2. **LLFF**: Real forward-facing scenes with `poses_bounds.npy`
+3. **Real 360**: 360-degree real scenes
+4. **Replica**: Facebook AI Research Replica dataset (simulated indoor scenes)
+5. **Dummy NeRF**: Synthetic test data for development
 
-## Next Steps
+## Features
 
-- [ ] Integrate with actual Semantic-NeRF checkpoint loading
-- [ ] Implement chunked processing for large scenes
-- [ ] Add CLI for NeRF checkpoint path and semantic label map
-- [ ] Optimize memory usage
-- [ ] Add progress bars for long-running operations
+- ✅ Multiple NeRF dataset format support
+- ✅ Automatic dataset type detection
+- ✅ Chunked processing for large scenes
+- ✅ Configurable density thresholds
+- ✅ Batch processing to avoid OOM
+- ✅ Optional dependencies with graceful fallbacks
+- ✅ Comprehensive error handling
+
+## Future Enhancements
+
+- [ ] Support for more semantic classes
+- [ ] Integration with trained Semantic-NeRF models
+- [ ] GPU acceleration for faster processing
+- [ ] Adaptive voxel sizing based on scene complexity
 
 ## Integration with Export Team
 
@@ -156,6 +187,18 @@ python nerf_to_voxel.py --voxel_size 0.20 --bbox -5 5 -5 5 0 10
 **Import Error**: Install dependencies
 ```bash
 pip install numpy matplotlib
+# Optional dependencies
+pip install torch torchvision  # For PyTorch support
+pip install pillow opencv-python  # For image processing
+```
+
+**Dataset Not Found**: Check dataset paths and structure
+```bash
+# Verify dataset directory exists and contains required files
+ls -la /path/to/dataset/
+# For synthetic: look for transforms_train.json
+# For LLFF: look for poses_bounds.npy
+# For Replica: look for .ply files
 ```
 
 ## Contact
@@ -164,6 +207,6 @@ For questions or issues, contact the Voxelization subteam during weekly meetings
 
 ## Version
 
-- **Version**: v0.1
-- **Date**: Week 1 Prototype
-- **Status**: Testing with dummy data
+- **Version**: v0.2
+- **Date**: Updated with real NeRF dataset support
+- **Status**: Production ready for multiple NeRF dataset formats

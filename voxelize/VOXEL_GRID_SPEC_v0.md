@@ -1,16 +1,16 @@
 # Voxel Grid Specification v0
 
-**Project**: WorldCraft - NeRF to Minecraft Converter  
-**Component**: Voxelization Module  
-**Version**: 0.1 (Week 1 Prototype)  
-**Date**: October 2025  
+**Project**: WorldCraft - NeRF to Minecraft Converter
+**Component**: Voxelization Module
+**Version**: 0.2 (Real NeRF Dataset Support)
+**Date**: October 2025
 **Author**: Voxelization Team
 
 ---
 
 ## 1. Overview
 
-This document specifies the coordinate system, transformation rules, and data format for the dense semantic voxel grid that serves as the intermediate representation between NeRF scene reconstruction and Minecraft export.
+This document specifies the coordinate system, transformation rules, and data format for the dense semantic voxel grid that serves as the intermediate representation between NeRF scene reconstruction and Minecraft export. The implementation now supports multiple NeRF dataset formats including synthetic, LLFF, real_360, and Replica datasets.
 
 ---
 
@@ -312,14 +312,14 @@ Per-voxel storage:
 | 50×50×50 m @ 0.15m | 333³ ≈ 37M  | ~296 MB |
 | 100×100×50 m @ 0.20m | 500×500×250 | ~500 MB |
 
-### 9.2 Chunked Processing (Future)
+### 9.2 Chunked Processing
 
 For large scenes exceeding available RAM:
 - Process grid in chunks (e.g., 32³ voxels at a time)
 - Save chunks to disk as temp files
 - Merge chunks in final step
 
-**Not implemented in Week 1** (scenes kept small for prototype)
+**Status**: Implemented in v0.2 with configurable batch sizes
 
 ---
 
@@ -327,21 +327,27 @@ For large scenes exceeding available RAM:
 
 ### 10.1 Scale Consistency ⚠️
 
-**Critical Open Issue**: 
+**Current Status**:
 - NeRF models often trained in normalized coordinates (e.g., scene fits in [-1, 1]³)
-- Real-world scale must be provided by Semantic-NeRF team
-- **Assumption**: 1 NeRF unit = 1 meter (to be validated)
+- Implementation includes auto-detection for different dataset types
+- **Assumption**: 1 NeRF unit = 1 meter (validated for most datasets)
+- Replica datasets use metric scale by default
 
-**Action**: Schedule meeting with Semantic-NeRF team to align on scale
+**Action**: Ongoing validation with real datasets
 
 ### 10.2 Semantic-NeRF Integration
+
+**Current Status**:
+- Multiple NeRF dataset types supported with format auto-detection
+- Semantic logits generated using heuristic methods for testing
+- Camera pose extraction implemented for synthetic and LLFF datasets
 
 **Assumptions**:
 - Semantic-NeRF outputs per-point semantic logits (K-dimensional vector)
 - Semantics available at query time (not post-processed)
 - Label set is consistent across all scenes
 
-**Action**: Validate assumptions when real Semantic-NeRF checkpoint is available
+**Action**: Integration with trained Semantic-NeRF models pending
 
 ### 10.3 Coordinate Frame Alignment
 
@@ -355,18 +361,21 @@ For large scenes exceeding available RAM:
 
 ## 11. Validation and Testing
 
-### 11.1 Week 1 Validation
+### 11.1 Current Validation
 
 **Visual Inspection**:
 - Generate XY, XZ, YZ slice PNGs
 - Verify occupancy and RGB patterns match expected geometry
 - Check semantic labels are reasonable
+- Test with multiple dataset types (synthetic, LLFF, Replica)
 
 **Sanity Checks**:
 - Grid size matches expected (derived from bbox and voxel_size)
 - Occupancy rate in reasonable range (not 0% or 100%)
 - RGB values have variation (not all black or all white)
 - meta.json loads without errors
+- Camera pose extraction accuracy
+- Dataset auto-detection reliability
 
 ### 11.2 Future Testing
 
@@ -379,6 +388,7 @@ For large scenes exceeding available RAM:
 ## 12. Version History
 
 - **v0.1** (Week 1): Initial specification with dummy NeRF data
+- **v0.2** (Current): Added support for real NeRF datasets (synthetic, LLFF, real_360, Replica), chunked processing, and improved error handling
 
 ---
 

@@ -1,2 +1,18 @@
+# Core dependencies
 numpy>=1.21.0
 matplotlib>=3.5.0
+
+# Optional dependencies for enhanced functionality
+# Uncomment as needed:
+
+# PyTorch for advanced NeRF models
+# torch>=1.12.0
+# torchvision>=0.13.0
+
+# Image processing
+# pillow>=8.0.0
+# opencv-python>=4.5.0
+
+# For development and testing
+# pytest>=6.0.0
+# black>=22.0.0
