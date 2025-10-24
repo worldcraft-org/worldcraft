@@ -1,16 +1,21 @@
 # Running Nerfstudio on OCF HPC 
+## Container Setup
+the container should already be at: ~/nerfstudio_latest.sif
 
+The container is not included in this repo. [Build it.](container-setup.md) (optional)
+
+ 
 ## Access
 
    ```bash
    # we have shared credentials
    ssh your_username@hpcctl.ocf.berkeley.edu
 
-   # container should already be at: ~/nerfstudio_latest.sif
+   
    # wrapper script should be at: ~/run-nerfstudio.sh
 
-   # The wrapper script will create ~/nvlibs and copy required libraries
-   # This happens automatically the first time you run it
+   # the wrapper script will create ~/nvlibs and copy required libraries
+   # this happens automatically the first time you run it
    ```
 
 ## Usage
@@ -35,6 +40,7 @@ https://www.ocf.berkeley.edu/docs/services/hpc/slurm/#h3_using-sbatch
 ## Important Notes
 
 - **Always use the wrapper script** (`./run-nerfstudio.sh`)  don't run singularity directly cuz it won't work
+
 
 ## Files
 
