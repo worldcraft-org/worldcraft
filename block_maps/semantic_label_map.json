@@ -1,0 +1,26 @@
+{
+  "0": {
+    "block": "minecraft:air",
+    "description": "Empty space"
+  },
+  "1": {
+    "block": "minecraft:stone_bricks",
+    "description": "Floor"
+  },
+  "2": {
+    "block": "minecraft:brick_block",
+    "description": "Wall"
+  },
+  "3": {
+    "block": "minecraft:oak_planks",
+    "description": "Roof"
+  },
+  "4": {
+    "block": "minecraft:glass",
+    "description": "Window"
+  },
+  "5": {
+    "block": "minecraft:gray_concrete",
+    "description": "Road"
+  }
+}

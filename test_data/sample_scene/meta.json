@@ -1,0 +1,15 @@
+{
+  "dimensions": [
+    16,
+    16,
+    16
+  ],
+  "labels": {
+    "0": "air",
+    "1": "floor",
+    "2": "wall",
+    "3": "roof",
+    "4": "window",
+    "5": "road"
+  }
+}
