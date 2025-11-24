@@ -12,7 +12,12 @@ if [ ! -d "$HOME/nvlibs" ]; then
     echo "nvidia libraries copied to ~/nvlibs"
 fi
 
+NS_INTERNAL_PATH="/usr/local/lib/python3.10/dist-packages/nerfstudio"
+LOCAL_PATCH_DIR="$HOME/ns_patches"
+
 # run the container with --nv flag and bind nvidia libraries
 singularity exec --nv \
   --bind "$HOME/nvlibs:/usr/local/nvidia/lib64" \
+  --bind "$LOCAL_PATCH_DIR/exporter.py:$NS_INTERNAL_PATH/scripts/exporter.py" \
+  --bind "$LOCAL_PATCH_DIR/exporter_utils.py:$NS_INTERNAL_PATH/exporter/exporter_utils.py" \
   ~/nerfstudio_latest.sif "$@"
