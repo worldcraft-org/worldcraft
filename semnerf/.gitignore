@@ -3,3 +3,6 @@
 
 #copied nvidia libs
 nvlibs/
+
+# Large checkpoint files in runs
+runs/**/*.ckpt
