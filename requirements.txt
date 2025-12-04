@@ -1,4 +1,0 @@
-numpy>=1.17.0
-amulet-core>=1.9.0
-amulet-nbt>=2.1.0
-matplotlib>=3.0.0
