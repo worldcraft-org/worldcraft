@@ -196,6 +196,14 @@ async def convert_to_npz(
     file: UploadFile = File(...), 
     voxel_size: float = Form(0.05)
 ):
+    """
+    Convert PLY point cloud to voxelized NPZ format.
+    
+    NPZ Output Format:
+        - points: (N, 3) array of voxel center positions
+        - color_grid: (N, 3) array of RGB colors (uint8)
+        - occupancy_grid: (X, Y, Z) boolean array of voxel occupancy
+    """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".ply") as tmp_in:
         shutil.copyfileobj(file.file, tmp_in)
         tmp_in_path = tmp_in.name
@@ -227,6 +235,8 @@ async def convert_to_npz(
         if voxel_grid.color_grid is not None:
             colors_out = (voxel_grid.color_grid[xs, ys, zs] * 255).astype(np.uint8)
 
+        # MIGRATION NOTE: Changed field name from 'colors' to 'color_grid' for consistency
+        # with VoxelGrid dataclass. Old NPZ files with 'colors' field will need regeneration.
         np.savez_compressed(
             tmp_out_path,
             points=points_out,
@@ -252,6 +262,11 @@ def cli_convert_ply_to_npz(ply_path: str, output_path: str, voxel_size: float = 
         ply_path: Path to input PLY file
         output_path: Path to output NPZ file
         voxel_size: Size of voxels (default: 0.05)
+    
+    NPZ Output Format:
+        - points: (N, 3) array of voxel center positions
+        - color_grid: (N, 3) array of RGB colors (uint8)
+        - occupancy_grid: (X, Y, Z) boolean array of voxel occupancy
     """
     print(f"Converting {ply_path} to {output_path}")
     print(f"Voxel size: {voxel_size}")
