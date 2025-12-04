@@ -8,7 +8,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --output=%j_train_job.log
 
-FOLDERNAME = $1
+FOLDERNAME=$1
 
 # process data
 ./run-nerfstudio.sh ns-process-data images --data $HOME/$FOLDERNAME/ --output-dir $HOME/processed_data/$FOLDERNAME
