@@ -1,0 +1,38 @@
+name: worldcraft
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+
+  # Install via pip
+  - pip:
+    # Core dependencies (must install in this order)
+    - ninja
+    
+    # PyTorch with CUDA 11.8
+    - torch==2.1.2+cu118
+    - torchvision==0.16.2+cu118
+    
+    # tiny-cuda-nn (after torch)
+    - git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+    
+    # Nerfstudio
+    - nerfstudio
+    
+    # Image processing dependencies
+    - transformers
+    - Pillow
+    - matplotlib
+    - tqdm
+    
+    # Voxelize dependencies
+    - fastapi
+    - uvicorn[standard]
+    - plotly
+    - open3d
+    
+    # Export dependencies
+    - litemapy
