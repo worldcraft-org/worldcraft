@@ -196,6 +196,14 @@ async def convert_to_npz(
     file: UploadFile = File(...), 
     voxel_size: float = Form(0.05)
 ):
+    """
+    Convert PLY point cloud to voxelized NPZ format.
+    
+    NPZ Output Format:
+        - points: (N, 3) array of voxel center positions
+        - color_grid: (N, 3) array of RGB colors (uint8)
+        - occupancy_grid: (X, Y, Z) boolean array of voxel occupancy
+    """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".ply") as tmp_in:
         shutil.copyfileobj(file.file, tmp_in)
         tmp_in_path = tmp_in.name
@@ -227,10 +235,12 @@ async def convert_to_npz(
         if voxel_grid.color_grid is not None:
             colors_out = (voxel_grid.color_grid[xs, ys, zs] * 255).astype(np.uint8)
 
+        # MIGRATION NOTE: Changed field name from 'colors' to 'color_grid' for consistency
+        # with VoxelGrid dataclass. Old NPZ files with 'colors' field will need regeneration.
         np.savez_compressed(
             tmp_out_path,
             points=points_out,
-            colors=colors_out,
+            color_grid=colors_out,
             occupancy_grid=voxel_grid.occupancy_grid,
         )
         
@@ -242,3 +252,107 @@ async def convert_to_npz(
 
     except Exception as e:
         return {"error": str(e)}
+
+
+def cli_convert_ply_to_npz(ply_path: str, output_path: str, voxel_size: float = 0.05):
+    """
+    Command-line interface for converting PLY to NPZ format.
+    
+    Args:
+        ply_path: Path to input PLY file
+        output_path: Path to output NPZ file
+        voxel_size: Size of voxels (default: 0.05)
+    
+    NPZ Output Format:
+        - points: (N, 3) array of voxel center positions
+        - color_grid: (N, 3) array of RGB colors (uint8)
+        - occupancy_grid: (X, Y, Z) boolean array of voxel occupancy
+    """
+    print(f"Converting {ply_path} to {output_path}")
+    print(f"Voxel size: {voxel_size}")
+    
+    try:
+        # Load PLY file
+        points, colors = load_ply_from_temp(ply_path)
+        print(f"Loaded {len(points)} points from PLY file")
+        
+        # Prepare data
+        data = {
+            "points": points,
+            "densities": np.ones(len(points)),
+            "semantic_labels": np.zeros(len(points), dtype=int),
+            "colors": colors,
+            "features": None,
+            "bounds": (points.min(0), points.max(0)),
+        }
+        
+        # Voxelize
+        print("Voxelizing...")
+        voxelizer = Voxelizer(voxel_size=voxel_size)
+        voxel_grid = voxelizer.voxelize(data)
+        
+        # Extract occupied voxels
+        xs, ys, zs = np.where(voxel_grid.occupancy_grid)
+        points_out = np.array([
+            voxelizer.voxel_index_to_world((x, y, z))
+            for x, y, z in zip(xs, ys, zs)
+        ])
+        
+        colors_out = np.full((len(points_out), 3), 150, dtype=np.uint8)
+        if voxel_grid.color_grid is not None:
+            colors_out = (voxel_grid.color_grid[xs, ys, zs] * 255).astype(np.uint8)
+        
+        print(f"Voxelized to {len(points_out)} voxels")
+        
+        # Save NPZ
+        np.savez_compressed(
+            output_path,
+            points=points_out,
+            color_grid=colors_out,
+            occupancy_grid=voxel_grid.occupancy_grid,
+        )
+        
+        print(f"✓ Saved to {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+    
+    # Check if running as CLI or web server
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        # Web server mode
+        import uvicorn
+        print("Starting Voxelizer API server...")
+        print("Visit http://localhost:8000/docs for API documentation")
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    elif len(sys.argv) > 1:
+        # CLI mode
+        parser = argparse.ArgumentParser(
+            description="Convert PLY point cloud to voxelized NPZ format"
+        )
+        parser.add_argument("input", help="Input PLY file path")
+        parser.add_argument("output", help="Output NPZ file path")
+        parser.add_argument(
+            "--voxel-size",
+            type=float,
+            default=0.05,
+            help="Voxel size (default: 0.05)"
+        )
+        
+        args = parser.parse_args()
+        success = cli_convert_ply_to_npz(args.input, args.output, args.voxel_size)
+        sys.exit(0 if success else 1)
+    else:
+        # No arguments - show help
+        print("Usage:")
+        print("  CLI mode:    python voxelize.py <input.ply> <output.npz> [--voxel-size SIZE]")
+        print("  Server mode: python voxelize.py serve")
+        sys.exit(1)

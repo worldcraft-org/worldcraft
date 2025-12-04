@@ -22,8 +22,9 @@ import matplotlib.colors as mcolors
 # ==============================================================================
 # Configuration
 # ==============================================================================
-INPUT_DIR = "./data/images"  # Directory containing input images
-OUTPUT_DIR = "./data"  # Directory for output files
+SCENE_DIR = "./data/my_scene"  # Base scene directory
+INPUT_DIR = os.path.join(SCENE_DIR, "images")  # Directory containing input images
+OUTPUT_SEMANTICS_DIR = os.path.join(SCENE_DIR, "semantics")  # Directory for semantic masks
 MODEL_CHECKPOINT = "facebook/mask2former-swin-large-mapillary-vistas-semantic"
 
 # Downscale factors for generating multiple resolutions
@@ -48,7 +49,7 @@ def load_model_and_processor(model_checkpoint, device):
     return processor, model
 
 
-def generate_panoptic_classes_json(model, output_dir):
+def generate_panoptic_classes_json(model, scene_dir):
     """Generate panoptic_classes.json file with class mappings and colors."""
     print("\nGenerating panoptic_classes.json with Section 7 colors...")
     
@@ -89,14 +90,14 @@ def generate_panoptic_classes_json(model, output_dir):
     }
     
     # Save the JSON
-    output_path = os.path.join(output_dir, "panoptic_classes.json")
+    output_path = os.path.join(scene_dir, "panoptic_classes.json")
     with open(output_path, "w") as f:
         json.dump(panoptic_data, f, indent=2)
     
     print(f"Saved panoptic_classes.json to {output_path}")
 
 
-def process_images(processor, model, input_dir, output_dir, device):
+def process_images(processor, model, input_dir, output_semantics_dir, device):
     """Process all images in the input directory and save segmentation maps."""
     # Gather image files
     image_files = [f for f in os.listdir(input_dir) 
@@ -106,8 +107,7 @@ def process_images(processor, model, input_dir, output_dir, device):
     print(f"\nProcessing {len(image_files)} images...")
     
     # Create output directory
-    seg_output_dir = os.path.join(output_dir, "segmentations", "thing")
-    os.makedirs(seg_output_dir, exist_ok=True)
+    os.makedirs(output_semantics_dir, exist_ok=True)
     
     max_val = 0
     min_val = 255
@@ -137,22 +137,22 @@ def process_images(processor, model, input_dir, output_dir, device):
             max_val = max(max_val, semantic_map_np.max())
             min_val = min(min_val, semantic_map_np.min())
             
-            # Save as Grayscale PNG
+            # Save as Grayscale PNG (force .png extension)
             output_filename = os.path.splitext(file_name)[0] + ".png"
-            output_path = os.path.join(seg_output_dir, output_filename)
+            output_path = os.path.join(output_semantics_dir, output_filename)
             Image.fromarray(semantic_map_np, mode='L').save(output_path)
             
         except Exception as e:
             print(f"\nError processing {file_name}: {e}")
             continue
     
-    print(f"\nAll images processed and saved to {seg_output_dir}")
+    print(f"\nAll images processed and saved to {output_semantics_dir}")
     print(f"Max class ID: {max_val}, Min class ID: {min_val}")
 
 
-def create_downscaled_versions(output_dir, factors):
+def create_downscaled_versions(scene_dir, factors):
     """Create downscaled versions of the segmentation maps."""
-    base_sem_dir = os.path.join(output_dir, "segmentations", "thing")
+    base_sem_dir = os.path.join(scene_dir, "semantics")
     
     if not os.path.exists(base_sem_dir):
         print(f"Warning: {base_sem_dir} does not exist. Skipping downscaling.")
@@ -166,7 +166,7 @@ def create_downscaled_versions(output_dir, factors):
         return
     
     for factor in factors:
-        out_dir = os.path.join(output_dir, f"segmentations_{factor}", "thing")
+        out_dir = os.path.join(scene_dir, f"semantics_{factor}")
         os.makedirs(out_dir, exist_ok=True)
         print(f"\nCreating downscaled versions (factor {factor}x) in {out_dir}...")
         
@@ -184,19 +184,92 @@ def create_downscaled_versions(output_dir, factors):
                 continue
 
 
-def main():
+def validate_dataset(scene_dir):
+    """Validate that images and semantic masks match."""
+    print("\n" + "=" * 70)
+    print("Validating Dataset")
+    print("=" * 70)
+    
+    input_dir = os.path.join(scene_dir, "images")
+    semantics_dir = os.path.join(scene_dir, "semantics")
+    
+    if not os.path.exists(input_dir):
+        print(f"❌ Error: Input directory not found: {input_dir}")
+        return False
+    
+    if not os.path.exists(semantics_dir):
+        print(f"❌ Error: Semantics directory not found: {semantics_dir}")
+        return False
+    
+    # Get image files
+    image_files = sorted([f for f in os.listdir(input_dir) 
+                         if f.lower().endswith(('.jpg', '.png', '.jpeg'))])
+    
+    # Get semantic files (should all be .png)
+    semantic_files = sorted([f for f in os.listdir(semantics_dir) 
+                            if f.endswith('.png')])
+    
+    print(f"Images found: {len(image_files)}")
+    print(f"Semantic masks found: {len(semantic_files)}")
+    
+    if len(image_files) != len(semantic_files):
+        print(f"❌ Error: Mismatch in number of images ({len(image_files)}) and semantic masks ({len(semantic_files)})")
+        return False
+    
+    # Check that each image has a corresponding semantic mask
+    errors = []
+    for img_file in image_files:
+        base_name = os.path.splitext(img_file)[0]
+        semantic_file = base_name + ".png"
+        
+        if semantic_file not in semantic_files:
+            errors.append(f"Missing semantic mask for image: {img_file}")
+    
+    if errors:
+        print(f"❌ Found {len(errors)} validation errors:")
+        for error in errors[:10]:  # Show first 10 errors
+            print(f"  - {error}")
+        if len(errors) > 10:
+            print(f"  ... and {len(errors) - 10} more errors")
+        return False
+    
+    # Verify panoptic_classes.json exists
+    panoptic_path = os.path.join(scene_dir, "panoptic_classes.json")
+    if not os.path.exists(panoptic_path):
+        print(f"❌ Error: panoptic_classes.json not found at {panoptic_path}")
+        return False
+    
+    print("✅ Validation passed!")
+    print(f"  - All {len(image_files)} images have matching semantic masks")
+    print(f"  - panoptic_classes.json present")
+    return True
+
+
+def main(scene_dir=None):
     """Main execution function."""
+    # Use provided scene_dir or fall back to default
+    if scene_dir is None:
+        scene_dir = SCENE_DIR
+    
+    input_dir = os.path.join(scene_dir, "images")
+    output_semantics_dir = os.path.join(scene_dir, "semantics")
+    
     print("=" * 70)
     print("Semantic Segmentation Processing")
     print("=" * 70)
+    print(f"Scene directory: {scene_dir}")
     
     # Validate input directory
-    if not os.path.exists(INPUT_DIR):
-        print(f"Error: Input directory '{INPUT_DIR}' does not exist.")
-        return
+    if not os.path.exists(input_dir):
+        print(f"Error: Input directory '{input_dir}' does not exist.")
+        print(f"Please ensure your scene directory structure is:")
+        print(f"  {scene_dir}/")
+        print(f"    images/")
+        return 1
     
-    # Create output directory
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Create scene directory and semantics output directory
+    os.makedirs(scene_dir, exist_ok=True)
+    os.makedirs(output_semantics_dir, exist_ok=True)
     
     # Setup device
     device = setup_device()
@@ -205,20 +278,63 @@ def main():
     processor, model = load_model_and_processor(MODEL_CHECKPOINT, device)
     
     # Generate panoptic_classes.json
-    generate_panoptic_classes_json(model, OUTPUT_DIR)
+    generate_panoptic_classes_json(model, scene_dir)
     
     # Process all images
-    process_images(processor, model, INPUT_DIR, OUTPUT_DIR, device)
+    process_images(processor, model, input_dir, output_semantics_dir, device)
     
     # Create downscaled versions
-    create_downscaled_versions(OUTPUT_DIR, DOWNSCALE_FACTORS)
+    create_downscaled_versions(scene_dir, DOWNSCALE_FACTORS)
+    
+    # Validate the dataset
+    validate_dataset(scene_dir)
     
     print("\n" + "=" * 70)
     print("Processing complete!")
     print("=" * 70)
-    print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Scene directory: {scene_dir}")
+    print(f"Semantic masks: {output_semantics_dir}")
+    print(f"Panoptic classes: {os.path.join(scene_dir, 'panoptic_classes.json')}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description="Process images to generate semantic segmentation masks",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Example:
+  python process_semantics.py --scene-dir ./data/my_scene
+  
+Directory Structure (required):
+  ./data/my_scene/
+    images/
+      image1.jpg
+      image2.jpg
+      ...
+  
+Directory Structure (generated):
+  ./data/my_scene/
+    semantics/
+      image1.png
+      image2.png
+      ...
+    semantics_2/    (downscaled 2x)
+    semantics_4/    (downscaled 4x)
+    semantics_8/    (downscaled 8x)
+    panoptic_classes.json
+        """
+    )
+    
+    parser.add_argument(
+        "--scene-dir",
+        default=SCENE_DIR,
+        help=f"Scene directory containing 'images/' subdirectory (default: {SCENE_DIR})"
+    )
+    
+    args = parser.parse_args()
+    sys.exit(main(args.scene_dir))
 
