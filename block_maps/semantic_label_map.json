@@ -8,7 +8,7 @@
     "description": "Floor"
   },
   "2": {
-    "block": "minecraft:brick_block",
+    "block": "minecraft:bricks",
     "description": "Wall"
   },
   "3": {
