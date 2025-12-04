@@ -89,7 +89,6 @@ def stage_1_semantic_segmentation(scene_dir):
     print("# STAGE 1: Semantic Segmentation")
     print("#" * 70)
     
-    # Update the config in process_semantics.py to use the correct scene dir
     process_script = "image-processing/process_semantics.py"
     
     # Check if semantics already exist
@@ -103,18 +102,8 @@ def stage_1_semantic_segmentation(scene_dir):
                 print("Skipping semantic segmentation")
                 return True
     
-    # Note: The process_semantics.py script uses SCENE_DIR = "./data/my_scene" by default
-    # For a production setup, we'd need to modify it to accept command-line arguments
-    print("\n⚠️  Note: You may need to edit image-processing/process_semantics.py")
-    print(f"   to set SCENE_DIR = '{scene_dir}'")
-    print("\nPress Enter to continue, or Ctrl+C to abort...")
-    try:
-        input()
-    except KeyboardInterrupt:
-        print("\nAborted by user")
-        return False
-    
-    cmd = ["python", process_script]
+    # Pass scene directory as command-line argument
+    cmd = ["python", process_script, "--scene-dir", scene_dir]
     return run_command(cmd, "Semantic Segmentation Processing")
 
 

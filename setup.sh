@@ -34,6 +34,7 @@ eval "$(conda shell.bash hook)"
 conda activate worldcraft
 
 # Install CUDA toolkit
+# NOTE: CUDA toolkit version must match PyTorch CUDA version in environment.yml (cu118 = CUDA 11.8)
 echo ""
 echo "Installing CUDA toolkit 11.8..."
 conda install -c "nvidia/label/cuda-11.8.0" cuda-toolkit -y

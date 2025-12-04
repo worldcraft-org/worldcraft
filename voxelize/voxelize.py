@@ -312,7 +312,13 @@ if __name__ == "__main__":
     import argparse
     
     # Check if running as CLI or web server
-    if len(sys.argv) > 1 and sys.argv[1] != "serve":
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        # Web server mode
+        import uvicorn
+        print("Starting Voxelizer API server...")
+        print("Visit http://localhost:8000/docs for API documentation")
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    elif len(sys.argv) > 1:
         # CLI mode
         parser = argparse.ArgumentParser(
             description="Convert PLY point cloud to voxelized NPZ format"
@@ -330,8 +336,8 @@ if __name__ == "__main__":
         success = cli_convert_ply_to_npz(args.input, args.output, args.voxel_size)
         sys.exit(0 if success else 1)
     else:
-        # Web server mode
-        import uvicorn
-        print("Starting Voxelizer API server...")
-        print("Visit http://localhost:8000/docs for API documentation")
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        # No arguments - show help
+        print("Usage:")
+        print("  CLI mode:    python voxelize.py <input.ply> <output.npz> [--voxel-size SIZE]")
+        print("  Server mode: python voxelize.py serve")
+        sys.exit(1)
